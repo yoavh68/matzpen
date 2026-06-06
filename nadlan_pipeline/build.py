@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 """
 build.py - אורקסטרטור הצינור.  הרצה:  python build.py
-טוען seed -> מושך מכל מקור -> ממזג+מתייג -> כותב cities.json -> מזריק ל-HTML.
+טוען seed -> מושך/קורא מכל מקור -> ממזג+מתייג -> כותב cities.json -> מזריק ל-HTML.
 נכשל "ברכות": אם מקור נופל, שומרים על הערך הקיים ומדווחים.
 """
 import json
 import re
 import datetime
 import config
-from sources import datagov, cbs, nadlan, iplan
+from sources import datagov, cbs, nadlan, iplan, local_input
 import normalize
 
 
@@ -21,7 +21,17 @@ def collect_updates(cities):
     updates = {c["n"]: {} for c in cities}
     report = []
 
-    # data.gov.il : אוכלוסייה
+    # קובץ נתונים רשמי ידני (מחיר/מלאי/שכ"ד מרשות המסים+למ"ס) - המקור העיקרי
+    created = local_input.ensure_template(cities)
+    if created:
+        report.append("נוצר קובץ input/market_data.csv (מלא מראש) - ערוך אותו ועדכן מספרים")
+    market = local_input.read_market_data()
+    for name, upd in market.items():
+        if name in updates:
+            updates[name].update(upd)
+    report.append(f"קובץ market_data.csv: {len(market)} ערים")
+
+    # data.gov.il : אוכלוסייה (אם נמצא דאטהסט מתאים)
     try:
         pop = datagov.fetch_population_by_city()
         for name, d in pop.items():
@@ -31,17 +41,7 @@ def collect_updates(cities):
     except Exception as e:
         report.append(f"אוכלוסייה נכשל: {e}")
 
-    # data.gov.il : מלאי לא מכור
-    try:
-        unsold = datagov.fetch_unsold_by_city()
-        for name, units in unsold.items():
-            if name in updates:
-                updates[name]["unsold24"] = (units, "high")
-        report.append(f"מלאי לא מכור (data.gov.il): {len(unsold)} ערים")
-    except Exception as e:
-        report.append(f"מלאי לא מכור נכשל: {e}")
-
-    # nadlan.gov.il : מחיר עסקאות אמיתי
+    # nadlan אוטומטי - כבוי (האתר נחסם; משתמשים ב-market_data.csv במקום)
     if config.ENABLE_NADLAN:
         ok = 0
         for c in cities:
@@ -50,10 +50,8 @@ def collect_updates(cities):
                 updates[c["n"]]["price24"] = (price, "high")
                 ok += 1
         report.append(f"מחירי עסקאות (nadlan): {ok}/{len(cities)} ערים")
-    else:
-        report.append("nadlan כבוי - price24 נשאר כפי שהוא")
 
-    # iplan : תב"ע (יחידות דיור בתוכניות)
+    # iplan תב"ע - כבוי (SSL חסום); יופעל אם יימצא נתיב עובד
     if config.ENABLE_IPLAN:
         try:
             tba = iplan.fetch_tba_by_city([c["n"] for c in cities])
@@ -88,7 +86,6 @@ def run():
     write_report(report, summary)
     print("\n".join(report))
     print(f"\nרמות אמינות: {summary}")
-    print(f"נכתב: {config.OUTPUT_JSON}")
 
 
 def inject_into_html(cities):

@@ -36,7 +36,7 @@ CKAN_QUERIES = {
 # 3. nadlan.gov.il - עסקאות אמיתיות (רשות המסים / KARMEN)
 #    אין API רשמי. שיקול משפטי - האחריות על המשתמש.
 # ---------------------------------------------------------------------------
-ENABLE_NADLAN = True
+ENABLE_NADLAN = False  # האתר נחסם (React+reCAPTCHA). משתמשים ב-input/market_data.csv.
 NADLAN_BASE = "https://www.nadlan.gov.il/Nadlan.REST/Main"
 NADLAN_SEARCH = NADLAN_BASE + "/GetDataByQuery"
 NADLAN_DEALS = NADLAN_BASE + "/GetAssestAndDeals"
@@ -44,7 +44,7 @@ NADLAN_DEALS = NADLAN_BASE + "/GetAssestAndDeals"
 # ---------------------------------------------------------------------------
 # 3b. מנהל התכנון (iplan / מבא"ת) - תב"ע: יחידות דיור בתוכניות
 # ---------------------------------------------------------------------------
-ENABLE_IPLAN = True
+ENABLE_IPLAN = False  # ags.iplan.gov.il מחזיר שגיאת SSL. יופעל אם יימצא נתיב עובד.
 IPLAN_XPLAN_QUERY = "https://ags.iplan.gov.il/arcgis/rest/services/PlanningPublic/Xplan/MapServer/0/query"
 TBA_PLAN_STATUS = "approved"
 
